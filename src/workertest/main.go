@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 	"workertest/workerpool"
@@ -17,7 +18,7 @@ func log(s string) {
 	}
 }
 
-func workWithPool(wp workerpool.WorkerPool) {
+func workWithPool(async bool, wp workerpool.WorkerPool) {
 	workSlice := make([]func(), 0, N)
 	results := make(chan int)
 	for i := 0; i < N;  i++ {
@@ -27,7 +28,11 @@ func workWithPool(wp workerpool.WorkerPool) {
 				})
 	}
 
-	wp.AssignWorkAsync(workSlice...)
+	if async {
+		wp.AssignWorkAsync(workSlice...)
+	} else {
+		wp.AssignWorkSync(workSlice...)
+	}
 	
 	log("Pool result: ")
 	for i := 0; i < len(workSlice); i++ {
@@ -57,6 +62,7 @@ func workGoroutines() {
 }
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	//if N is large this setting to true will output a ton of stuff
 	verbose = false
 
@@ -68,9 +74,14 @@ func main() {
 	wp, _ := workerpool.NewGenericWorkerPool(N)
 
 	start := time.Now()
-	workWithPool(wp)
+	workWithPool(true, wp)
 	elapsed := time.Since(start)
-	fmt.Printf("Elapsed time using pool %s\n", elapsed)
+	fmt.Printf("Elapsed time using async pool %s\n", elapsed)
+
+	start = time.Now()
+	workWithPool(false, wp)
+	elapsed = time.Since(start)
+	fmt.Printf("Elapsed time using sync pool %s\n", elapsed)
 
 	start = time.Now()
 	workGoroutines()
