@@ -1,6 +1,6 @@
 # randomtests
 
-export GOPATH=<path to randomtests>
+export GOPATH=path to randomtests
 
 workerpool vs goroutines test
 -----------------------------
