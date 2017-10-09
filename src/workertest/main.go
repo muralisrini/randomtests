@@ -1,6 +1,9 @@
 package main
 
 import (
+	"golang.org/x/net/context"
+	"golang.org/x/sync/semaphore"
+
 	"fmt"
 	"runtime"
 	"sync"
@@ -61,6 +64,25 @@ func workGoroutines() {
 	log("\n")
 }
 
+func workGoroutinesWithSem(n int64) {
+	wgt := semaphore.NewWeighted(n)
+	c := make(chan int, N)
+	for i := 0; i < N;  i++ {
+		iLcl := i
+		go func() {
+			wgt.Acquire(context.Background(), 1)
+			defer wgt.Release(1)
+			c <- M*iLcl
+		} ()
+	}
+	log(fmt.Sprintf("Goroutines with sem(weight=%d) result: ", n))
+	for i := 0; i < N; i++ {
+		res := <- c
+		log(fmt.Sprintf("%d ", res))
+	}
+	log("\n")
+}
+
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	//if N is large this setting to true will output a ton of stuff
@@ -87,4 +109,14 @@ func main() {
 	workGoroutines()
 	elapsed = time.Since(start)
 	fmt.Printf("Elapsed time using goroutine %s\n", elapsed)
+
+	start = time.Now()
+	workGoroutinesWithSem(int64(runtime.NumCPU()))
+	elapsed = time.Since(start)
+	fmt.Printf("Elapsed time using goroutine with sem and weight == Num CPU (%d) -  %s\n", runtime.NumCPU(), elapsed)
+
+	start = time.Now()
+	workGoroutinesWithSem(int64(N))
+	elapsed = time.Since(start)
+	fmt.Printf("Elapsed time using goroutine with sem and full weight == all N (basically no blocking) %d -  %s\n", N, elapsed)
 }
